@@ -73,8 +73,10 @@ func TestLoadRecipients(t *testing.T) {
 	}}
 	const plaintext = "#secret:example\nAPI_KEY=secretcontents\n"
 	encryptedPath := filepath.Join(directory, "envtest")
-	require.NoError(t, os.WriteFile(encryptedPath, nil, 0o600))
 	require.NoError(t, kage.EncryptFile(encryptedPath, recipients, secrets))
+	info, err := os.Stat(encryptedPath)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
 	assert.Equal(t, plaintext, decryptFile(t, encryptedPath, ageIdentity))
 	assert.Equal(t, plaintext, decryptFile(t, encryptedPath, sshIdentity))
 }

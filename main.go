@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -46,7 +47,10 @@ func main() {
 	}
 	secrets, err := kage.ReadEncryptedFile(*path, identities)
 	if err != nil {
-		log.Fatal(err)
+		if *setSecret == "" || !errors.Is(err, os.ErrNotExist) {
+			log.Fatal(err)
+		}
+		secrets = kage.File{}
 	}
 
 	if *reencrypt || *setSecret != "" {

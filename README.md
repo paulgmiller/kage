@@ -4,6 +4,10 @@
 [age](https://github.com/FiloSottile/age)-encrypted file and synchronizes them
 to a Kubernetes namespace.
 
+It is intentionally small and opinionated. For a more general and powerful
+secret-management system—with correspondingly more configuration and
+complexity—see [SOPS](https://github.com/getsops/sops).
+
 ## Installation
 
 Install the latest version with Go:
@@ -82,6 +86,15 @@ Add or update a value in the encrypted file:
 kage -secret-file secrets/envtest -set 'api/API_TOKEN=new-secret-value'
 ```
 
+If the encrypted file does not exist, `-set` creates it using the adjacent
+`recipients.txt`. This is the simplest way to start a new file:
+
+```sh
+mkdir -p secrets
+cp ~/.ssh/id_ed25519.pub secrets/recipients.txt
+kage -secret-file secrets/envtest -set 'api/API_TOKEN=new-secret-value'
+```
+
 Re-encrypt the file using its adjacent `recipients.txt`, for example after
 changing the recipient list:
 
@@ -97,6 +110,38 @@ kage -h
 
 Kage creates opaque Kubernetes Secrets and marks them with the
 `managed-by: github.com/paulgmiller/kage` annotation.
+
+## Loading secrets locally
+
+Applications written in Go can use `kage.Load()` similarly to
+[`godotenv.Load()`](https://github.com/joho/godotenv). It first loads `.env`,
+then decrypts and loads `secrets/envtest` when `~/.ssh/id_ed25519` matches a
+recipient used to encrypt the file:
+
+```go
+package main
+
+import (
+	"log"
+	"os"
+
+	"github.com/paulgmiller/kage/pkg/kage"
+)
+
+func main() {
+	if err := kage.Load(); err != nil {
+		log.Fatal(err)
+	}
+
+	apiToken := os.Getenv("API_TOKEN")
+	_ = apiToken
+}
+```
+
+Like godotenv, `kage.Load()` does not overwrite environment variables that are
+already set. This makes it possible to use ordinary values from `.env` and
+encrypted local values from `secrets/envtest`, while allowing the shell or CI
+environment to take precedence.
 
 ## End-to-end test
 

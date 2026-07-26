@@ -99,7 +99,7 @@ func ReadEncryptedFile(path string, identities []age.Identity) (File, error) {
 
 // EncryptFile writes a kage secrets file encrypted for the supplied recipients.
 func EncryptFile(path string, recipients []age.Recipient, secrets File) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC, 0o600)
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0o600)
 	if err != nil {
 		return fmt.Errorf("open encrypted file %q: %w", path, err)
 	}

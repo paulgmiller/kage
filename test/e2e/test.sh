@@ -21,16 +21,9 @@ ssh-keygen \
   -f "${HOME}/.ssh/id_ed25519"
 cp "${HOME}/.ssh/id_ed25519.pub" "${work_dir}/secrets/recipients.txt"
 
-cat >"${work_dir}/secrets/plaintext" <<'EOF'
-#secret:first-secret
-API_TOKEN=first-secret-value
-EOF
-
-age \
-  -R "${work_dir}/secrets/recipients.txt" \
-  -o "${work_dir}/secrets/envtest" \
-  "${work_dir}/secrets/plaintext"
-rm "${work_dir}/secrets/plaintext"
+kage \
+  --secret-file "${work_dir}/secrets/envtest" \
+  --set "first-secret/API_TOKEN=first-secret-value"
 
 kage \
   --secret-file "${work_dir}/secrets/envtest" \

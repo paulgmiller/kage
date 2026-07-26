@@ -5,7 +5,6 @@ ARG KUBECTL_VERSION=v1.35.0
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
-        age \
         ca-certificates \
         curl \
         docker.io \
