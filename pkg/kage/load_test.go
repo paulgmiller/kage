@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"careme/pkg/kage"
+	"github.com/paulgmiller/kage/pkg/kage"
 
 	"filippo.io/age"
 	agessh "filippo.io/age/agessh"
