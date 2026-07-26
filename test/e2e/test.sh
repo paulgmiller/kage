@@ -34,10 +34,14 @@ check_output="$(
     --secret-file "${work_dir}/secrets/envtest" \
     --check
 )"
-grep -q '^first-secret$' <<<"${check_output}"
-grep -q '^  API_TOKEN=f\\[[0-9][0-9]*\\]e$' <<<"${check_output}"
-grep -q '^second-secret$' <<<"${check_output}"
-grep -q '^  PASSWORD=s\\[[0-9][0-9]*\\]e$' <<<"${check_output}"
+expected_check_output=$'first-secret\n  API_TOKEN=f[18]e\n\nsecond-secret\n  PASSWORD=s[19]e'
+if [[ "${check_output}" != "${expected_check_output}" ]]; then
+  echo "unexpected kage --check output" >&2
+  printf 'expected:\n%s\nactual:\n%s\n' \
+    "${expected_check_output}" \
+    "${check_output}" >&2
+  exit 1
+fi
 
 kind create cluster --name "${cluster_name}" --wait 120s
 kage \
