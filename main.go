@@ -1,16 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"filippo.io/age"
 	"github.com/paulgmiller/kage/pkg/kage"
 
 	corev1 "k8s.io/api/core/v1"
@@ -73,6 +76,22 @@ func main() {
 				return
 			}
 			log.Printf("updated %s/%s", secretName, key)
+
+			currentRecipient, currentRecipientLine, err := kage.DefaultSSHRecipient()
+			if err != nil {
+				log.Fatal(err)
+			}
+			recipients, err = promptForCurrentIdentity(
+				os.Stdin,
+				os.Stderr,
+				recipientsPath,
+				recipients,
+				currentRecipient,
+				currentRecipientLine,
+			)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		if err := secrets.Validate(); err != nil {
@@ -143,6 +162,70 @@ func main() {
 		log.Printf("Updated %s/%s", *namespace, secret.Name)
 
 	}
+}
+
+func promptForCurrentIdentity(
+	input io.Reader,
+	output io.Writer,
+	recipientsPath string,
+	recipients []age.Recipient,
+	current age.Recipient,
+	currentLine string,
+) ([]age.Recipient, error) {
+	if current == nil || currentLine == "" {
+		return recipients, nil
+	}
+	contents, err := os.ReadFile(recipientsPath)
+	if err != nil {
+		return nil, fmt.Errorf("read recipients file %q: %w", recipientsPath, err)
+	}
+	currentKey := strings.Join(strings.Fields(currentLine)[:2], " ")
+	for line := range strings.Lines(string(contents)) {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && strings.Join(fields[:2], " ") == currentKey {
+			return recipients, nil
+		}
+	}
+
+	fmt.Fprintf(output, "Current SSH identity %s is not in %s. Add it? [y/N] ", currentKey, recipientsPath)
+	answer, err := bufio.NewReader(input).ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("read identity confirmation: %w", err)
+	}
+	answer = strings.TrimSpace(answer)
+	if !strings.EqualFold(answer, "y") && !strings.EqualFold(answer, "yes") {
+		return recipients, nil
+	}
+
+	if err := appendRecipient(recipientsPath, currentLine); err != nil {
+		return nil, err
+	}
+	return append(recipients, current), nil
+}
+
+func appendRecipient(path, recipient string) error {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read recipients file %q: %w", path, err)
+	}
+	prefix := ""
+	if len(contents) > 0 && contents[len(contents)-1] != '\n' {
+		prefix = "\n"
+	}
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0)
+	if err != nil {
+		return fmt.Errorf("open recipients file %q: %w", path, err)
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+	if _, err := fmt.Fprintf(file, "%s%s\n", prefix, recipient); err != nil {
+		return fmt.Errorf("append current identity to %q: %w", path, err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close recipients file %q: %w", path, err)
+	}
+	return nil
 }
 
 func secretNeedsUpdate(current, desired *corev1.Secret) bool {

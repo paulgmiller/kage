@@ -34,6 +34,29 @@ func DefaultSSHIdentities() ([]age.Identity, error) {
 	return []age.Identity{identity}, nil
 }
 
+// DefaultSSHRecipient loads the public key for the default SSH identity.
+func DefaultSSHRecipient() (age.Recipient, string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return nil, "", nil
+	}
+
+	path := filepath.Join(home, ".ssh", "id_ed25519.pub")
+	key, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, "", nil
+		}
+		return nil, "", fmt.Errorf("read ssh recipient %q: %w", path, err)
+	}
+	line := strings.TrimSpace(string(key))
+	recipient, err := agessh.ParseRecipient(line)
+	if err != nil {
+		return nil, "", fmt.Errorf("parse ssh recipient %q: %w", path, err)
+	}
+	return recipient, line, nil
+}
+
 // LoadRecipients parses age and SSH recipients from a text file.
 func LoadRecipients(path string) ([]age.Recipient, error) {
 	file, err := os.Open(path)
