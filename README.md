@@ -86,6 +86,18 @@ Add or update a value in the encrypted file:
 kage -secret-file secrets/envtest -set 'api/API_TOKEN=new-secret-value'
 ```
 
+Create an encrypted file from every Secret currently in a namespace:
+
+```sh
+kage -secret-file secrets/envtest -ns my-namespace -create
+```
+
+This reads the encryption recipients from `secrets/recipients.txt`, just like
+`-set` and `-reencrypt`. Secret names and keys are sorted so that decrypting
+repeated exports produces stable plaintext. The command refuses to create an
+invalid kage file, including when the namespace contains no Secrets or a value
+shorter than five characters.
+
 If the encrypted file does not exist, `-set` creates it using the adjacent
 `recipients.txt`. This is the simplest way to start a new file:
 

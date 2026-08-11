@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"filippo.io/age"
@@ -20,6 +21,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -35,10 +37,45 @@ func main() {
 	namespace := flag.String("ns", "", "k8s namespace")
 	check := flag.Bool("check", false, "dump secret names")
 	setSecret := flag.String("set", "", "add or update a secret value as secret/key=value")
+	create := flag.Bool("create", false, "create the secret file from all secrets in the namespace")
 	reencrypt := flag.Bool("reencrypt", false, "re-encrypt the secret file using its recipients.txt")
 	forreal := flag.Bool("apply", false, "actually apply secrets. Don't just print what would be done")
 	flag.Parse()
 	ctx := context.Background()
+	if *create {
+		if *namespace == "" {
+			log.Fatal("namespace is required")
+		}
+		recipientsPath := filepath.Join(filepath.Dir(*path), recipientsFilename)
+		recipients, err := kage.LoadRecipients(recipientsPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		cfg, err := kubeConfig()
+		if err != nil {
+			log.Fatal(err)
+		}
+		clientset, err := kubernetes.NewForConfig(cfg)
+		if err != nil {
+			log.Fatal(err)
+		}
+		items, err := clientset.CoreV1().Secrets(*namespace).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			log.Fatalf("list secrets in %s: %s", *namespace, err)
+		}
+		secrets := fromK8s(items.Items)
+		if len(secrets) == 0 {
+			log.Fatalf("no secrets found in %s", *namespace)
+		}
+		if err := secrets.Validate(); err != nil {
+			log.Fatalf("secrets in %s cannot be stored: %s", *namespace, err)
+		}
+		if err := kage.EncryptFile(*path, recipients, secrets); err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("created %s from %d secrets in %s", *path, len(secrets), *namespace)
+		return
+	}
 
 	if *forreal {
 		log.Printf("THIS IS NOT A DRILL")
@@ -124,14 +161,10 @@ func main() {
 
 	secretsK8s := toK8s(secrets)
 
-	cfg, err := clientcmd.BuildConfigFromFlags(
-		"",
-		filepath.Join(os.Getenv("HOME"), ".kube", "config"),
-	)
+	cfg, err := kubeConfig()
 	if err != nil {
 		panic(err)
 	}
-
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		panic(err)
@@ -162,6 +195,35 @@ func main() {
 		log.Printf("Updated %s/%s", *namespace, secret.Name)
 
 	}
+}
+
+func kubeConfig() (*rest.Config, error) {
+	cfg, err := clientcmd.BuildConfigFromFlags(
+		"",
+		filepath.Join(os.Getenv("HOME"), ".kube", "config"),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func fromK8s(items []corev1.Secret) kage.File {
+	sort.Slice(items, func(i, j int) bool { return items[i].Name < items[j].Name })
+	secrets := make(kage.File, 0, len(items))
+	for _, item := range items {
+		keys := make([]string, 0, len(item.Data))
+		for key := range item.Data {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		secret := kage.Secret{Name: item.Name, Lines: make([]kage.Line, 0, len(keys))}
+		for _, key := range keys {
+			secret.Lines = append(secret.Lines, kage.Line{Key: key, Value: string(item.Data[key])})
+		}
+		secrets = append(secrets, secret)
+	}
+	return secrets
 }
 
 func promptForCurrentIdentity(

@@ -362,6 +362,30 @@ func TestSecretNeedsUpdate(t *testing.T) {
 	}
 }
 
+func TestFromK8s(t *testing.T) {
+	t.Parallel()
+
+	secrets := fromK8s([]corev1.Secret{
+		{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Data: map[string][]byte{
+			"TOKEN": []byte("worker-token"),
+		}},
+		{ObjectMeta: metav1.ObjectMeta{Name: "api"}, Data: map[string][]byte{
+			"Z_KEY": []byte("last-value"),
+			"A_KEY": []byte("first-value"),
+		}},
+	})
+
+	require.Equal(t, kage.File{
+		{Name: "api", Lines: []kage.Line{
+			{Key: "A_KEY", Value: "first-value"},
+			{Key: "Z_KEY", Value: "last-value"},
+		}},
+		{Name: "worker", Lines: []kage.Line{
+			{Key: "TOKEN", Value: "worker-token"},
+		}},
+	}, secrets)
+}
+
 func TestSecrets(t *testing.T) {
 	t.Parallel()
 
