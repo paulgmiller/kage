@@ -60,6 +60,25 @@ test "$(
     --namespace default \
     --output 'jsonpath={.data.PASSWORD}' \
     | base64 --decode
-)" = "second-secret-value"
+  )" = "second-secret-value"
+
+exported_file="${work_dir}/secrets/namespace-export"
+kage \
+  --secret-file "${exported_file}" \
+  --ns default \
+  --create
+
+exported_check_output="$(
+  kage \
+    --secret-file "${exported_file}" \
+    --check
+)"
+if [[ "${exported_check_output}" != "${expected_check_output}" ]]; then
+  echo "unexpected check output for namespace export" >&2
+  printf 'expected:\n%s\nactual:\n%s\n' \
+    "${expected_check_output}" \
+    "${exported_check_output}" >&2
+  exit 1
+fi
 
 echo "kage end-to-end test passed"
