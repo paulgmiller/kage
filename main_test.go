@@ -21,6 +21,41 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestRootCommandUsesSubcommands(t *testing.T) {
+	t.Parallel()
+
+	cmd := newRootCommand()
+	var output bytes.Buffer
+	cmd.SetOut(&output)
+	cmd.SetErr(&output)
+	cmd.SetArgs([]string{"--help"})
+
+	require.NoError(t, cmd.Execute())
+	for _, subcommand := range []string{"apply", "check", "create", "reencrypt", "set"} {
+		assert.Contains(t, output.String(), subcommand)
+	}
+	assert.Contains(t, output.String(), "--secret-file")
+}
+
+func TestSubcommandArgumentsAreValidated(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		args    []string
+		message string
+	}{
+		{args: []string{"set"}, message: "accepts 1 arg"},
+		{args: []string{"apply"}, message: `required flag(s) "namespace" not set`},
+		{args: []string{"create"}, message: `required flag(s) "namespace" not set`},
+	}
+	for _, tt := range tests {
+		cmd := newRootCommand()
+		cmd.SetArgs(tt.args)
+		err := cmd.Execute()
+		require.ErrorContains(t, err, tt.message)
+	}
+}
+
 func parseSecrets(t *testing.T, input io.Reader) (kage.File, error) {
 	t.Helper()
 

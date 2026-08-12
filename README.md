@@ -59,65 +59,66 @@ can be read.
 
 ## Usage
 
-The default encrypted file is `secrets/envtest`. Select another file with
-`-secret-file`.
+Kage uses focused subcommands for each operation. The default encrypted file is
+`secrets/envtest`; select another file with the persistent `--secret-file` (or
+`-f`) option.
 
 Inspect secret names and masked values:
 
 ```sh
-kage -secret-file secrets/envtest -check
+kage check --secret-file secrets/envtest
 ```
 
 Preview changes to existing secrets in a namespace:
 
 ```sh
-kage -secret-file secrets/envtest -ns my-namespace
+kage apply --secret-file secrets/envtest --namespace my-namespace
 ```
 
 Apply changes:
 
 ```sh
-kage -secret-file secrets/envtest -ns my-namespace -apply
+kage apply --secret-file secrets/envtest --namespace my-namespace --confirm
 ```
 
 Add or update a value in the encrypted file:
 
 ```sh
-kage -secret-file secrets/envtest -set 'api/API_TOKEN=new-secret-value'
+kage set --secret-file secrets/envtest 'api/API_TOKEN=new-secret-value'
 ```
 
 Create an encrypted file from every Secret currently in a namespace:
 
 ```sh
-kage -secret-file secrets/envtest -ns my-namespace -create
+kage create --secret-file secrets/envtest --namespace my-namespace
 ```
 
 This reads the encryption recipients from `secrets/recipients.txt`, just like
-`-set` and `-reencrypt`. Secret names and keys are sorted so that decrypting
+`set` and `reencrypt`. Secret names and keys are sorted so that decrypting
 repeated exports produces stable plaintext. The command refuses to create an
 invalid kage file, including when the namespace contains no Secrets or a value
 shorter than five characters.
 
-If the encrypted file does not exist, `-set` creates it using the adjacent
+If the encrypted file does not exist, `set` creates it using the adjacent
 `recipients.txt`. This is the simplest way to start a new file:
 
 ```sh
 mkdir -p secrets
 cp ~/.ssh/id_ed25519.pub secrets/recipients.txt
-kage -secret-file secrets/envtest -set 'api/API_TOKEN=new-secret-value'
+kage set --secret-file secrets/envtest 'api/API_TOKEN=new-secret-value'
 ```
 
 Re-encrypt the file using its adjacent `recipients.txt`, for example after
 changing the recipient list:
 
 ```sh
-kage -secret-file secrets/envtest -reencrypt
+kage reencrypt --secret-file secrets/envtest
 ```
 
 Show all command-line options:
 
 ```sh
-kage -h
+kage --help
 ```
 
 Kage creates opaque Kubernetes Secrets and marks them with the
@@ -164,6 +165,5 @@ test image, creates a kind cluster, and verifies two Secrets:
 ./test/e2e.sh
 ```
 
-> **Note:** Preview mode suppresses updates to existing Secrets, but the
-> current version creates a Secret immediately when it does not already exist.
-> Check the target namespace before running the preview command.
+Without `--confirm`, `kage apply` is a dry run: it reports both creations and
+updates without changing the target namespace.
