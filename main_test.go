@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestRootCommandUsesSubcommands(t *testing.T) {
@@ -140,87 +139,6 @@ func TestLoadRecipientsRejectsUnknownEntry(t *testing.T) {
 	require.ErrorContains(t, err, `parse recipient "not-a-recipient"`)
 }
 
-func TestPromptForCurrentIdentity(t *testing.T) {
-	t.Parallel()
-
-	_, currentPrivateKey, err := ed25519.GenerateKey(rand.Reader)
-	require.NoError(t, err)
-	current, err := agessh.NewEd25519Identity(currentPrivateKey)
-	require.NoError(t, err)
-	currentPublicKey, err := ssh.NewPublicKey(currentPrivateKey.Public())
-	require.NoError(t, err)
-	currentLine := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(currentPublicKey)))
-	existing, err := age.GenerateX25519Identity()
-	require.NoError(t, err)
-
-	t.Run("prompts and adds missing identity", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), recipientsFilename)
-		require.NoError(t, os.WriteFile(path, []byte(existing.Recipient().String()), 0o600))
-		var output bytes.Buffer
-
-		recipients, err := promptForCurrentIdentity(
-			strings.NewReader("yes\n"),
-			&output,
-			path,
-			[]age.Recipient{existing.Recipient()},
-			current.Recipient(),
-			currentLine,
-		)
-
-		require.NoError(t, err)
-		require.Len(t, recipients, 2)
-		assert.Contains(t, output.String(), "Current SSH identity")
-		contents, err := os.ReadFile(path)
-		require.NoError(t, err)
-		assert.Equal(
-			t,
-			existing.Recipient().String()+"\n"+currentLine+"\n",
-			string(contents),
-		)
-	})
-
-	t.Run("declining leaves recipients unchanged", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), recipientsFilename)
-		original := existing.Recipient().String() + "\n"
-		require.NoError(t, os.WriteFile(path, []byte(original), 0o600))
-
-		recipients, err := promptForCurrentIdentity(
-			strings.NewReader("n\n"),
-			io.Discard,
-			path,
-			[]age.Recipient{existing.Recipient()},
-			current.Recipient(),
-			currentLine,
-		)
-
-		require.NoError(t, err)
-		require.Len(t, recipients, 1)
-		contents, err := os.ReadFile(path)
-		require.NoError(t, err)
-		assert.Equal(t, original, string(contents))
-	})
-
-	t.Run("included identity does not prompt", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), recipientsFilename)
-		original := currentLine + " user@example\n"
-		require.NoError(t, os.WriteFile(path, []byte(original), 0o600))
-		var output bytes.Buffer
-
-		recipients, err := promptForCurrentIdentity(
-			strings.NewReader("yes\n"),
-			&output,
-			path,
-			[]age.Recipient{current.Recipient()},
-			current.Recipient(),
-			currentLine,
-		)
-
-		require.NoError(t, err)
-		require.Len(t, recipients, 1)
-		assert.Empty(t, output.String())
-	})
-}
-
 func decryptFile(t *testing.T, path string, identity age.Identity) string {
 	t.Helper()
 
@@ -248,11 +166,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "unchanged",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -260,11 +176,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -276,11 +190,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "changed value",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -288,11 +200,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -304,11 +214,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "removed key",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -317,11 +225,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -333,11 +239,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "added key",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -345,11 +249,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -362,11 +264,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "annotation changed",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: "someone-else",
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: "someone-else",
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -374,11 +274,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -401,10 +299,10 @@ func TestFromK8s(t *testing.T) {
 	t.Parallel()
 
 	secrets := fromK8s([]corev1.Secret{
-		{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Data: map[string][]byte{
+		{Name: "worker", Data: map[string][]byte{
 			"TOKEN": []byte("worker-token"),
 		}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "api"}, Data: map[string][]byte{
+		{Name: "api", Data: map[string][]byte{
 			"Z_KEY": []byte("last-value"),
 			"A_KEY": []byte("first-value"),
 		}},
