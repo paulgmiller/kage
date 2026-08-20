@@ -38,21 +38,6 @@ func newSetCommand(opts *persistentOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			current, currentLine, err := kage.DefaultSSHRecipient()
-			if err != nil {
-				return err
-			}
-			recipients, err = promptForCurrentIdentity(
-				cmd.InOrStdin(),
-				cmd.ErrOrStderr(),
-				recipientsPath,
-				recipients,
-				current,
-				currentLine,
-			)
-			if err != nil {
-				return err
-			}
 			if err := secrets.Validate(); err != nil {
 				return fmt.Errorf("updated secrets did not validate: %w", err)
 			}
