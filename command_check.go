@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCheckCommand(opts *commandOptions) *cobra.Command {
+func newCheckCommand(opts *persistentOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "check",
 		Short: "Show secret names and masked values",

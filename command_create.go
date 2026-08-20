@@ -12,7 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func newCreateCommand(opts *commandOptions) *cobra.Command {
+func newCreateCommand(opts *persistentOptions) *cobra.Command {
 	var namespace string
 	cmd := &cobra.Command{
 		Use: "create", Short: "Create an encrypted file from a Kubernetes namespace", Args: cobra.NoArgs,

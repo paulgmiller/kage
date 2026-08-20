@@ -15,12 +15,12 @@ const (
 	defaultSecretFile        = "secrets/envtest"
 )
 
-type commandOptions struct {
+type persistentOptions struct {
 	secretFile string
 }
 
 func newRootCommand() *cobra.Command {
-	opts := &commandOptions{}
+	opts := &persistentOptions{}
 	cmd := &cobra.Command{
 		Use:           "kage",
 		Short:         "Manage age-encrypted Kubernetes secrets",

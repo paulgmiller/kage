@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func newApplyCommand(opts *commandOptions) *cobra.Command {
+func newApplyCommand(opts *persistentOptions) *cobra.Command {
 	var namespace string
 	var confirm bool
 	cmd := &cobra.Command{

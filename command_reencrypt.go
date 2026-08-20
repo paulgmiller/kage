@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newReencryptCommand(opts *commandOptions) *cobra.Command {
+func newReencryptCommand(opts *persistentOptions) *cobra.Command {
 	return &cobra.Command{
 		Use: "reencrypt", Short: "Re-encrypt the file using its recipients.txt", Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {

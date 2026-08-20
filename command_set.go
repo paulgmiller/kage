@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newSetCommand(opts *commandOptions) *cobra.Command {
+func newSetCommand(opts *persistentOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "set SECRET/KEY=VALUE",
 		Short: "Add or update an encrypted secret value",
