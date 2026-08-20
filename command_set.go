@@ -16,7 +16,7 @@ func newSetCommand(opts *commandOptions) *cobra.Command {
 		Use:   "set SECRET/KEY=VALUE",
 		Short: "Add or update an encrypted secret value",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			secretName, key, value, err := parseSetArg(args[0])
 			if err != nil {
 				return err
@@ -42,7 +42,14 @@ func newSetCommand(opts *commandOptions) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			recipients, err = promptForCurrentIdentity(opts.input, opts.errOutput, recipientsPath, recipients, current, currentLine)
+			recipients, err = promptForCurrentIdentity(
+				cmd.InOrStdin(),
+				cmd.ErrOrStderr(),
+				recipientsPath,
+				recipients,
+				current,
+				currentLine,
+			)
 			if err != nil {
 				return err
 			}

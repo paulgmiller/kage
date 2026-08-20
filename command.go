@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/paulgmiller/kage/pkg/kage"
 	"github.com/spf13/cobra"
@@ -19,13 +17,10 @@ const (
 
 type commandOptions struct {
 	secretFile string
-	input      io.Reader
-	output     io.Writer
-	errOutput  io.Writer
 }
 
 func newRootCommand() *cobra.Command {
-	opts := &commandOptions{input: os.Stdin, output: os.Stdout, errOutput: os.Stderr}
+	opts := &commandOptions{}
 	cmd := &cobra.Command{
 		Use:           "kage",
 		Short:         "Manage age-encrypted Kubernetes secrets",
