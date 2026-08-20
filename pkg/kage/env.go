@@ -79,8 +79,7 @@ func findSecretFile(path string) (string, error) {
 		return "", err
 	}
 
-	directory := workingDirectory
-	for {
+	for _, directory := range parentDirectories(workingDirectory) {
 		candidate := filepath.Join(directory, path)
 		_, err := os.Stat(candidate)
 		if err == nil {
@@ -90,15 +89,14 @@ func findSecretFile(path string) (string, error) {
 			return "", fmt.Errorf("find secret file %q: %w", candidate, err)
 		}
 		if directory == gitRoot {
-			return "", fmt.Errorf("find secret file %q: %w", path, os.ErrNotExist)
+			break
 		}
-		directory = filepath.Dir(directory)
 	}
+	return "", fmt.Errorf("find secret file %q: %w", path, os.ErrNotExist)
 }
 
 func findGitRoot(directory string) (string, error) {
-	current := directory
-	for {
+	for _, current := range parentDirectories(directory) {
 		_, err := os.Stat(filepath.Join(current, ".git"))
 		if err == nil {
 			return current, nil
@@ -106,14 +104,22 @@ func findGitRoot(directory string) (string, error) {
 		if !errors.Is(err, os.ErrNotExist) {
 			return "", fmt.Errorf("find Git root from %q: %w", directory, err)
 		}
+	}
 
-		parent := filepath.Dir(current)
-		if parent == current {
-			// Preserve the old current-directory-only behavior outside a Git
-			// worktree instead of loading an unrelated ancestor's secrets.
-			return directory, nil
+	// Preserve the old current-directory-only behavior outside a Git worktree
+	// instead of loading an unrelated ancestor's secrets.
+	return directory, nil
+}
+
+func parentDirectories(directory string) []string {
+	directories := []string{directory}
+	for {
+		parent := filepath.Dir(directory)
+		if parent == directory {
+			return directories
 		}
-		current = parent
+		directories = append(directories, parent)
+		directory = parent
 	}
 }
 
