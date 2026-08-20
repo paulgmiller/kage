@@ -79,31 +79,20 @@ func findSecretFile(path string) (string, error) {
 		return "", err
 	}
 
-	for _, directory := range parentDirectories(workingDirectory) {
-		candidate := filepath.Join(directory, path)
-		_, err := os.Stat(candidate)
-		if err == nil {
-			return candidate, nil
-		}
-		if !errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("find secret file %q: %w", candidate, err)
-		}
-		if directory == gitRoot {
-			break
-		}
+	secretFile, err := findInParentDirectories(workingDirectory, gitRoot, path)
+	if err != nil {
+		return "", fmt.Errorf("find secret file %q: %w", path, err)
 	}
-	return "", fmt.Errorf("find secret file %q: %w", path, os.ErrNotExist)
+	return secretFile, nil
 }
 
 func findGitRoot(directory string) (string, error) {
-	for _, current := range parentDirectories(directory) {
-		_, err := os.Stat(filepath.Join(current, ".git"))
-		if err == nil {
-			return current, nil
-		}
-		if !errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("find Git root from %q: %w", directory, err)
-		}
+	gitDirectory, err := findInParentDirectories(directory, "", ".git")
+	if err == nil {
+		return filepath.Dir(gitDirectory), nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return "", fmt.Errorf("find Git root from %q: %w", directory, err)
 	}
 
 	// Preserve the old current-directory-only behavior outside a Git worktree
@@ -111,14 +100,24 @@ func findGitRoot(directory string) (string, error) {
 	return directory, nil
 }
 
-func parentDirectories(directory string) []string {
-	directories := []string{directory}
+func findInParentDirectories(directory, stopDirectory, path string) (string, error) {
 	for {
+		candidate := filepath.Join(directory, path)
+		_, err := os.Stat(candidate)
+		if err == nil {
+			return candidate, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("stat %q: %w", candidate, err)
+		}
+		if directory == stopDirectory {
+			return "", os.ErrNotExist
+		}
+
 		parent := filepath.Dir(directory)
 		if parent == directory {
-			return directories
+			return "", os.ErrNotExist
 		}
-		directories = append(directories, parent)
 		directory = parent
 	}
 }
