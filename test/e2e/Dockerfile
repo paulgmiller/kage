@@ -1,4 +1,4 @@
-FROM golang:1.26-bookworm
+FROM golang:1.27-bookworm
 
 ARG KIND_VERSION=v0.31.0
 ARG KUBECTL_VERSION=v1.35.0
