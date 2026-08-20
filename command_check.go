@@ -18,13 +18,19 @@ func newCheckCommand(opts *persistentOptions) *cobra.Command {
 			}
 			output := cmd.OutOrStdout()
 			for _, secret := range secrets {
-				fmt.Fprintln(output, secret.Name)
+				if _, err := fmt.Fprintln(output, secret.Name); err != nil {
+					return err
+				}
 				for _, line := range secret.Lines {
 					if line.Key != "" {
-						fmt.Fprintf(output, "  %s=%s\n", line.Key, maskedSecretValue(line.Value))
+						if _, err := fmt.Fprintf(output, "  %s=%s\n", line.Key, maskedSecretValue(line.Value)); err != nil {
+							return err
+						}
 					}
 				}
-				fmt.Fprintln(output)
+				if _, err := fmt.Fprintln(output); err != nil {
+					return err
+				}
 			}
 			return nil
 		},
