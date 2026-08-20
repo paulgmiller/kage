@@ -140,7 +140,6 @@ func TestLoadRecipientsRejectsUnknownEntry(t *testing.T) {
 	require.ErrorContains(t, err, `parse recipient "not-a-recipient"`)
 }
 
-
 func decryptFile(t *testing.T, path string, identity age.Identity) string {
 	t.Helper()
 
