@@ -24,13 +24,8 @@ import (
 func TestRootCommandUsesSubcommands(t *testing.T) {
 	t.Parallel()
 
-	cmd := newRootCommand()
 	var output bytes.Buffer
-	cmd.SetOut(&output)
-	cmd.SetErr(&output)
-	cmd.SetArgs([]string{"--help"})
-
-	require.NoError(t, cmd.Execute())
+	require.NoError(t, run([]string{"--help"}, strings.NewReader(""), &output, &output))
 	for _, subcommand := range []string{"apply", "check", "create", "reencrypt", "set"} {
 		assert.Contains(t, output.String(), subcommand)
 	}
@@ -44,15 +39,48 @@ func TestSubcommandArgumentsAreValidated(t *testing.T) {
 		args    []string
 		message string
 	}{
-		{args: []string{"set"}, message: "accepts 1 arg"},
-		{args: []string{"apply"}, message: `required flag(s) "namespace" not set`},
-		{args: []string{"create"}, message: `required flag(s) "namespace" not set`},
+		{args: []string{"set"}, message: "accepts 1 argument"},
+		{args: []string{"apply"}, message: "namespace is required"},
+		{args: []string{"create"}, message: "namespace is required"},
 	}
 	for _, tt := range tests {
-		cmd := newRootCommand()
-		cmd.SetArgs(tt.args)
-		err := cmd.Execute()
+		err := run(tt.args, strings.NewReader(""), io.Discard, io.Discard)
 		require.ErrorContains(t, err, tt.message)
+	}
+}
+
+func TestSubcommandHelp(t *testing.T) {
+	t.Parallel()
+
+	for _, subcommand := range []string{"apply", "check", "create", "reencrypt", "set"} {
+		t.Run(subcommand, func(t *testing.T) {
+			t.Parallel()
+
+			var output bytes.Buffer
+			err := run(
+				[]string{subcommand, "--help"},
+				strings.NewReader(""),
+				&output,
+				io.Discard,
+			)
+
+			require.NoError(t, err)
+			assert.Contains(t, output.String(), "kage "+subcommand)
+		})
+	}
+}
+
+func TestSecretFileFlagIsAcceptedBeforeOrAfterSubcommand(t *testing.T) {
+	t.Parallel()
+
+	for _, args := range [][]string{
+		{"--secret-file", "custom", "apply"},
+		{"apply", "--secret-file", "custom"},
+		{"-f", "custom", "apply"},
+		{"apply", "-f", "custom"},
+	} {
+		err := run(args, strings.NewReader(""), io.Discard, io.Discard)
+		require.ErrorContains(t, err, "namespace is required")
 	}
 }
 

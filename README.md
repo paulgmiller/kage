@@ -60,7 +60,7 @@ can be read.
 ## Usage
 
 Kage uses focused subcommands for each operation. The default encrypted file is
-`secrets/envtest`; select another file with the persistent `--secret-file` (or
+`secrets/envtest`; select another file with the shared `--secret-file` (or
 `-f`) option.
 
 Inspect secret names and masked values:
