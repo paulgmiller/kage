@@ -22,17 +22,19 @@ ssh-keygen \
 cp "${HOME}/.ssh/id_ed25519.pub" "${work_dir}/secrets/recipients.txt"
 
 kage \
+  set \
   --secret-file "${work_dir}/secrets/envtest" \
-  --set "first-secret/API_TOKEN=first-secret-value"
+  "first-secret/API_TOKEN=first-secret-value"
 
 kage \
+  set \
   --secret-file "${work_dir}/secrets/envtest" \
-  --set "second-secret/PASSWORD=second-secret-value"
+  "second-secret/PASSWORD=second-secret-value"
 
 check_output="$(
   kage \
-    --secret-file "${work_dir}/secrets/envtest" \
-    --check
+    check \
+    --secret-file "${work_dir}/secrets/envtest"
 )"
 expected_check_output=$'first-secret\n  API_TOKEN=f[18]e\n\nsecond-secret\n  PASSWORD=s[19]e'
 if [[ "${check_output}" != "${expected_check_output}" ]]; then
@@ -45,9 +47,10 @@ fi
 
 kind create cluster --name "${cluster_name}" --wait 120s
 kage \
+  apply \
   --secret-file "${work_dir}/secrets/envtest" \
-  --ns default \
-  --apply
+  --namespace default \
+  --confirm
 
 test "$(
   kubectl get secret first-secret \
@@ -64,14 +67,14 @@ test "$(
 
 exported_file="${work_dir}/secrets/namespace-export"
 kage \
+  create \
   --secret-file "${exported_file}" \
-  --ns default \
-  --create
+  --namespace default
 
 exported_check_output="$(
   kage \
-    --secret-file "${exported_file}" \
-    --check
+    check \
+    --secret-file "${exported_file}"
 )"
 if [[ "${exported_check_output}" != "${expected_check_output}" ]]; then
   echo "unexpected check output for namespace export" >&2
