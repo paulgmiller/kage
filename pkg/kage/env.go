@@ -6,20 +6,48 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"filippo.io/age"
 	"github.com/joho/godotenv"
 )
 
-// Load adds values from .env and secrets/envtest to the process environment
-// without overwriting variables that are already set.
-func Load() error {
+const (
+	defaultSecretFile = "secrets/envtest"
+	secretFileEnvVar  = "KAGE_SECRET_FILE"
+)
+
+// Load adds values from .env and an encrypted secrets file to the process
+// environment without overwriting variables that are already set. The secret
+// file can be supplied as the optional argument or through KAGE_SECRET_FILE;
+// otherwise secrets/envtest is used. Relative secret paths are searched for
+// from the working directory up to and including the Git root.
+func Load(secretPaths ...string) error {
+	if len(secretPaths) > 1 {
+		return errors.New("kage.Load accepts at most one secret path")
+	}
+
 	entries, err := readEnv(".env")
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	setMissingEnv(entries)
+
+	secretPath := os.Getenv(secretFileEnvVar)
+	if len(secretPaths) == 1 {
+		secretPath = secretPaths[0]
+	}
+	if secretPath == "" {
+		secretPath = defaultSecretFile
+	}
+	secretPath, err = findSecretFile(secretPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
 
 	identities, err := DefaultSSHIdentities()
 	if err != nil {
@@ -29,12 +57,64 @@ func Load() error {
 		return nil
 	}
 
-	entries, err = readEncryptedEnv("secrets/envtest", identities)
+	entries, err = readEncryptedEnv(secretPath, identities)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	setMissingEnv(entries)
 	return nil
+}
+
+func findSecretFile(path string) (string, error) {
+	if filepath.IsAbs(path) {
+		return path, nil
+	}
+
+	workingDirectory, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("get working directory: %w", err)
+	}
+	gitRoot, err := findGitRoot(workingDirectory)
+	if err != nil {
+		return "", err
+	}
+
+	directory := workingDirectory
+	for {
+		candidate := filepath.Join(directory, path)
+		_, err := os.Stat(candidate)
+		if err == nil {
+			return candidate, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("find secret file %q: %w", candidate, err)
+		}
+		if directory == gitRoot {
+			return "", fmt.Errorf("find secret file %q: %w", path, os.ErrNotExist)
+		}
+		directory = filepath.Dir(directory)
+	}
+}
+
+func findGitRoot(directory string) (string, error) {
+	current := directory
+	for {
+		_, err := os.Stat(filepath.Join(current, ".git"))
+		if err == nil {
+			return current, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("find Git root from %q: %w", directory, err)
+		}
+
+		parent := filepath.Dir(current)
+		if parent == current {
+			// Preserve the old current-directory-only behavior outside a Git
+			// worktree instead of loading an unrelated ancestor's secrets.
+			return directory, nil
+		}
+		current = parent
+	}
 }
 
 // parseEnv parses a dotenv-style stream. Empty lines and comments are ignored,

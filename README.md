@@ -129,7 +129,8 @@ Kage creates opaque Kubernetes Secrets and marks them with the
 Applications written in Go can use `kage.Load()` similarly to
 [`godotenv.Load()`](https://github.com/joho/godotenv). It first loads `.env`,
 then decrypts and loads `secrets/envtest` when `~/.ssh/id_ed25519` matches a
-recipient used to encrypt the file:
+recipient used to encrypt the file. When called from a subdirectory, Kage looks
+for the encrypted file in each parent directory through the Git root:
 
 ```go
 package main
@@ -150,6 +151,19 @@ func main() {
 	_ = apiToken
 }
 ```
+
+Select a different encrypted file with the optional argument or the
+`KAGE_SECRET_FILE` environment variable. An argument takes precedence over the
+environment variable:
+
+```go
+if err := kage.Load("secrets/development"); err != nil {
+	log.Fatal(err)
+}
+```
+
+Relative configured paths use the same upward search. Absolute paths are used
+exactly as supplied.
 
 Like godotenv, `kage.Load()` does not overwrite environment variables that are
 already set. This makes it possible to use ordinary values from `.env` and
