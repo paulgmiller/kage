@@ -11,7 +11,6 @@ import (
 
 	"github.com/paulgmiller/kage/pkg/kage"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -45,8 +44,6 @@ func fromK8s(items []corev1.Secret) kage.File {
 	return secrets
 }
 
-
-
 func secretNeedsUpdate(current, desired *corev1.Secret) bool {
 	if current.Annotations[managedByAnnotationKey] != desired.Annotations[managedByAnnotationKey] {
 		log.Printf("secret %s unmanged", desired.Name)
@@ -76,11 +73,9 @@ func toK8s(secretVals kage.File) []*corev1.Secret {
 			stringData[line.Key] = line.Value
 		}
 		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: vals.Name,
-				Annotations: map[string]string{
-					managedByAnnotationKey: managedByAnnotationValue,
-				},
+			Name: vals.Name,
+			Annotations: map[string]string{
+				managedByAnnotationKey: managedByAnnotationValue,
 			},
 			Type:       corev1.SecretTypeOpaque,
 			StringData: stringData,

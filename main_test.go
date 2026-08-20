@@ -18,7 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestRootCommandUsesSubcommands(t *testing.T) {
@@ -167,11 +166,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "unchanged",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -179,11 +176,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -195,11 +190,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "changed value",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -207,11 +200,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -223,11 +214,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "removed key",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -236,11 +225,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -252,11 +239,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "added key",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -264,11 +249,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -281,11 +264,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 		{
 			name: "annotation changed",
 			current: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: "someone-else",
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: "someone-else",
 				},
 				Type: corev1.SecretTypeOpaque,
 				Data: map[string][]byte{
@@ -293,11 +274,9 @@ func TestSecretNeedsUpdate(t *testing.T) {
 				},
 			},
 			desired: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "example",
-					Annotations: map[string]string{
-						managedByAnnotationKey: managedByAnnotationValue,
-					},
+				Name: "example",
+				Annotations: map[string]string{
+					managedByAnnotationKey: managedByAnnotationValue,
 				},
 				Type: corev1.SecretTypeOpaque,
 				StringData: map[string]string{
@@ -320,10 +299,10 @@ func TestFromK8s(t *testing.T) {
 	t.Parallel()
 
 	secrets := fromK8s([]corev1.Secret{
-		{ObjectMeta: metav1.ObjectMeta{Name: "worker"}, Data: map[string][]byte{
+		{Name: "worker", Data: map[string][]byte{
 			"TOKEN": []byte("worker-token"),
 		}},
-		{ObjectMeta: metav1.ObjectMeta{Name: "api"}, Data: map[string][]byte{
+		{Name: "api", Data: map[string][]byte{
 			"Z_KEY": []byte("last-value"),
 			"A_KEY": []byte("first-value"),
 		}},
