@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,9 +57,7 @@ func DefaultSSHRecipient() (age.Recipient, string, error) {
 	return recipient, line, nil
 }
 
-// LoadRecipients parses age and SSH recipients from a text file. HTTP(S)
-// entries are fetched as authorized_keys files, and entries age can't parse
-// as SSH recipients are skipped with a logged warning.
+// LoadRecipients parses age and SSH recipients from a text file.
 func LoadRecipients(path string) ([]age.Recipient, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -79,64 +75,26 @@ func LoadRecipients(path string) ([]age.Recipient, error) {
 			continue
 		}
 
-		var parsed []age.Recipient
-		if strings.HasPrefix(line, "https://") || strings.HasPrefix(line, "http://") {
-			parsed, err = loadRecipientsURL(line)
-		} else if strings.HasPrefix(line, "ssh-") {
-			var r age.Recipient
-			r, err = agessh.ParseRecipient(line)
-			parsed = []age.Recipient{r}
+		var recipient age.Recipient
+		if strings.HasPrefix(line, "ssh-") {
+			recipient, err = agessh.ParseRecipient(line)
 		} else {
+			var parsed []age.Recipient
 			parsed, err = age.ParseRecipients(strings.NewReader(line))
+			if err == nil {
+				recipient = parsed[0]
+			}
 		}
 		if err != nil {
 			return nil, fmt.Errorf("parse recipient %q in %q: %w", line, path, err)
 		}
-
-		recipients = append(recipients, parsed...)
+		recipients = append(recipients, recipient)
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("read recipients file %q: %w", path, err)
 	}
 	if len(recipients) == 0 {
 		return nil, fmt.Errorf("no recipients in %q", path)
-	}
-	return recipients, nil
-}
-
-func loadRecipientsURL(rawURL string) ([]age.Recipient, error) {
-	response, err := http.Get(rawURL)
-	if err != nil {
-		return nil, fmt.Errorf("fetch %q: %w", rawURL, err)
-	}
-	defer func() {
-		_ = response.Body.Close()
-	}()
-
-	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf("fetch %q: unexpected HTTP status %s", rawURL, response.Status)
-	}
-	var recipients []age.Recipient
-	scanner := bufio.NewScanner(response.Body)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		recipient, err := agessh.ParseRecipient(line)
-		if err != nil {
-			log.Printf(
-				"warning: ignoring unsupported SSH recipient from %q: %v",
-				rawURL,
-				err,
-			)
-			continue
-		}
-		recipients = append(recipients, recipient)
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("read keys from %q: %w", rawURL, err)
 	}
 	return recipients, nil
 }
