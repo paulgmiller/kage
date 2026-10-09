@@ -30,7 +30,7 @@ func TestRootCommandUsesSubcommands(t *testing.T) {
 	cmd.SetArgs([]string{"--help"})
 
 	require.NoError(t, cmd.Execute())
-	for _, subcommand := range []string{"apply", "check", "create", "reencrypt", "set"} {
+	for _, subcommand := range []string{"apply", "check", "create", "reencrypt", "set", "show"} {
 		assert.Contains(t, output.String(), subcommand)
 	}
 	assert.Contains(t, output.String(), "--secret-file")
@@ -44,6 +44,11 @@ func TestSubcommandArgumentsAreValidated(t *testing.T) {
 		message string
 	}{
 		{args: []string{"set"}, message: "accepts 1 arg"},
+		{args: []string{"show"}, message: "accepts 1 arg"},
+		{args: []string{"show", "api/TOKEN", "extra"}, message: "accepts 1 arg"},
+		{args: []string{"show", "TOKEN"}, message: "show argument must be secret/key"},
+		{args: []string{"show", "/TOKEN"}, message: "show argument must be secret/key"},
+		{args: []string{"show", "api/"}, message: "show argument must be secret/key"},
 		{args: []string{"apply"}, message: `required flag(s) "namespace" not set`},
 		{args: []string{"create"}, message: `required flag(s) "namespace" not set`},
 	}
@@ -136,7 +141,7 @@ func TestLoadRecipientsRejectsUnknownEntry(t *testing.T) {
 
 	_, err = kage.LoadRecipients(path)
 
-	require.ErrorContains(t, err, `parse recipient "not-a-recipient"`)
+	require.ErrorContains(t, err, `unknown recipient type: "not-a-recipient"`)
 }
 
 func decryptFile(t *testing.T, path string, identity age.Identity) string {

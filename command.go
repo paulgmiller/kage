@@ -32,6 +32,7 @@ func newRootCommand() *cobra.Command {
 		newCheckCommand(opts),
 		newApplyCommand(opts),
 		newSetCommand(opts),
+		newShowCommand(opts),
 		newCreateCommand(opts),
 		newReencryptCommand(opts),
 	)

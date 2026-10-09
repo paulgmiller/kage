@@ -44,9 +44,16 @@ The file passed to `kage` must be encrypted with age. To allow `kage` to update
 or re-encrypt it, place a `recipients.txt` file in the same directory:
 
 ```text
-# One age or SSH recipient per line
+# One age recipient, SSH recipient, or HTTP(S) URL per line
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...
+https://github.com/paulgmiller.keys
 ```
+
+For URL entries, Kage fetches an OpenSSH `authorized_keys`-style response and
+uses the SSH keys supported by age (currently Ed25519 and RSA). Unsupported key
+types and malformed entries in the response are ignored with a warning. The
+`age` CLI does not fetch these URLs itself, so the following `age -R` example
+applies to recipient files containing literal keys only.
 
 For example, with the `age` command installed:
 
@@ -68,6 +75,15 @@ Inspect secret names and masked values:
 ```sh
 kage check --secret-file secrets/envtest
 ```
+
+Print a single decrypted value:
+
+```sh
+kage show --secret-file secrets/envtest api/API_TOKEN
+```
+
+This prints only the value followed by a newline and returns an error if the
+secret or key does not exist.
 
 Preview changes to existing secrets in a namespace:
 
