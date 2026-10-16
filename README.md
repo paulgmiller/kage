@@ -131,6 +131,45 @@ changing the recipient list:
 kage reencrypt --secret-file secrets/envtest
 ```
 
+Merge independently edited encrypted files using their common ancestor:
+
+```sh
+kage merge base.age ours.age theirs.age --secret-file secrets/envtest
+```
+
+All three inputs must be valid encrypted kage files decryptable with the default
+SSH identity. Entries are matched by secret name and key. Independent additions,
+one-sided changes (including deletions), and identical changes merge automatically.
+Different changes to the same entry, including deletion versus modification,
+fail with the affected `secret/KEY` names without printing values. Inline comments
+are part of an entry; conflicting standalone comment changes fail with
+`secret/(comments)`. There is no interactive resolution or automatic winner.
+
+The result sorts secret names and keys and puts standalone comments at the start
+of their secret block. It is validated and encrypted using the `recipients.txt`
+beside the output file. Only ciphertext is written to disk, and the destination
+is replaced only after encryption succeeds. The output may be one of the inputs.
+A merge that removes every secret block is rejected because an empty file cannot
+be read as a kage file.
+
+For a file already conflicted by Git, extract the ancestor and both branch
+versions from the index rather than reading the working file's conflict markers:
+
+```sh
+merge_dir=$(mktemp -d)
+git show :1:secrets/envtest > "$merge_dir/base.age"
+git show :2:secrets/envtest > "$merge_dir/ours.age"
+git show :3:secrets/envtest > "$merge_dir/theirs.age"
+kage merge "$merge_dir/base.age" "$merge_dir/ours.age" "$merge_dir/theirs.age" \
+  --secret-file secrets/envtest
+# Only after the merge succeeds:
+git add secrets/envtest
+rm -r "$merge_dir"
+```
+
+This requires all three index stages; resolving add/add conflicts without an
+ancestor and installing a Git merge driver are not included in this command.
+
 Show all command-line options:
 
 ```sh
