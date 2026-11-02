@@ -42,7 +42,10 @@ func newMergeCommand(opts *persistentOptions) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("create merge output: %w", err)
 			}
-			defer os.Remove(temp.Name())
+			defer func() {
+				// Best-effort cleanup; a successful rename already removes this path.
+				_ = os.Remove(temp.Name())
+			}()
 			if err := temp.Close(); err != nil {
 				return fmt.Errorf("close merge output: %w", err)
 			}
